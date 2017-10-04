@@ -49,8 +49,7 @@ all_tet_elements = dlmread('temp_tet_elements.dat');
 ILT_E = 1:length(all_tet_elements);
 ILT_E = ILT_E';
 
-%Get nodes and surfaces from original geometry (.stl) use stlread for
-%stlread.
+%Get nodes and surfaces from original geometry (.stl) use stlread for stlread.
 [wall_tri, wall_nodes] = stlread(wall_stl_filename);
 [~, lumen_nodes ] = stlread(lumen_stl_filename);
 
@@ -65,7 +64,7 @@ ly = lumen_nodes(:,2);
 lz = lumen_nodes(:,3);
 
 %%Get boundaries
-[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries([wn wall_nodes]);
+[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries('PLANES.stl',[wn wall_nodes]);
 
 %Finds outside of ILT
 logis=ismembertol([ax,ay,az],[wx,wy,wz],1e-8);
@@ -98,7 +97,11 @@ real_wall_xyz = axyz(outside_ILT_nodes,:);
 wall_tri = MyCrustOpen(real_wall_xyz);
 new_wall_tri = [outside_ILT_nodes(wall_tri(:,1)),outside_ILT_nodes(wall_tri(:,2)),...
     outside_ILT_nodes(wall_tri(:,3))];
+
+%Fixes element connectivity numbers
 wall_tri_elem_nums = 1:length(new_wall_tri);
+lumen_tri_elem_nums = lumen_tri_elem_nums+length(wall_tri_elem_nums)+length(ILT_E);
+ILT_E = ILT_E+length(wall_tri_elem_nums);
 
 %Write abaqus %INP file
 fid3=fopen(abaqus_inp_name,'w');
@@ -110,7 +113,7 @@ fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]');
 
 %Print wall shell elements
 fprintf(fid3,'*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
-fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums', new_wall_tri]);
+fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums', new_wall_tri]');
 
 %Print ILT solid elements
 fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT\n');
@@ -118,12 +121,11 @@ fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
 
 %Lumen elements & surface
 fprintf(fid3,'*ELEMENT, type=S3R, ELSET = LUMEN\n');
-fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums', new_lumen_tri]);
+fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums', new_lumen_tri]');
 fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
 fprintf(fid3,'%s\n','1.,');
 fprintf(fid3,'*End Instance\n');
 fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
-
 
 %Prepares nsets for printing (must print in rows of <15)
 outrem=mod(length(outside_tet_nodes),10); inrem=mod(length(inside_tet_nodes),10);
