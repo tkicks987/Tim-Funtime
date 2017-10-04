@@ -7,8 +7,7 @@ load outside_ILT_nodes.mat
 outside_ILT_nodes = wall_nodes;
 
 %read output file frome gmsh
-filename = '010_12_INP.inp';
-original_file = fopen(filename,'r');
+original_file = fopen('010_12_INP.inp','r');
 wall_stl_filename  = 'wall_P.stl';
 lumen_stl_filename = 'lumen_P.stl';
 planes_name        = 'PLANES.stl';
@@ -66,9 +65,23 @@ ly = lumen_nodes(:,2);
 lz = lumen_nodes(:,3);
 
 %%Get boundaries
-[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries(planes_name, [wn wall_nodes]);
+[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries([wn wall_nodes]);
 
-%%
+%Finds outside of ILT
+logis=ismembertol([ax,ay,az],[wx,wy,wz],1e-8);
+[badrows,~]=find(logis==0);
+outside_tet_nodes=nodes; outside_tet_nodes(badrows,:)=[];
+
+%Finds inside of ILT
+logis=ismembertol([ax,ay,az],[lx,ly,lz],1e-8);
+[badrows,~]=find(logis==0);
+inside_tet_nodes=nodes; inside_tet_nodes(badrows,:)=[];
+
+%Redundant filtering
+bads = ismember(inside_tet_nodes,outside_tet_nodes);
+keepnodes = ~bads;
+inside_tet_nodes = inside_tet_nodes(keepnodes);
+
 %Create lumen surface
 axyz = [ax ay az];
 a_nodes = 1:length(ax);
@@ -76,60 +89,67 @@ a_nodes = a_nodes';
 
 real_lumen_xyz = axyz(inside_ILT_nodes,:);
 lumen_tri = MyCrustOpen(real_lumen_xyz);
-
-for i = 1:length(lumen_tri);
-    
-    temp_tri = lumen_tri(i,:);
-    n1 = temp_tri(1);
-    n2 = temp_tri(2);
-    n3 = temp_tri(3);
-    
-    new_lumen_tri(i,:) = [inside_ILT_nodes(n1) inside_ILT_nodes(n2) inside_ILT_nodes(n3)];
-    
-end
+new_lumen_tri = [inside_ILT_nodes(lumen_tri(:,1));inside_ILT_nodes(lumen_tri(:,2));...
+    inside_ILT_nodes(lumen_tri(:,3))]';
 lumen_tri_elem_nums = 1:length(new_lumen_tri);
-%%
+
 %Create wall surface
 real_wall_xyz = axyz(outside_ILT_nodes,:);
 wall_tri = MyCrustOpen(real_wall_xyz);
-
-for i = 1:length(wall_tri);
-    
-    temp_tri = wall_tri(i,:);
-    n1 = temp_tri(1);
-    n2 = temp_tri(2);
-    n3 = temp_tri(3);
-    
-    new_wall_tri(i,:) = [outside_ILT_nodes(n1) outside_ILT_nodes(n2) outside_ILT_nodes(n3)];
-    
-end
-
+new_wall_tri = [outside_ILT_nodes(wall_tri(:,1));outside_ILT_nodes(wall_tri(:,2));outside_ILT_nodes(wall_tri(:,3))]';
 wall_tri_elem_nums = 1:length(new_wall_tri);
 
 trimesh(new_lumen_tri, ax, ay, az); hold on
 trimesh(new_wall_tri, ax, ay, az)
 
-%%
 %Write abaqus %INP file
 fid3=fopen(abaqus_inp_name,'w');
 %PRINT THE FILE HEADER
 fprintf(fid3,'*HEADING\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO, CONTACT=NO\n');
-fprintf(fid3,'*Part, name=AAA\n*End part\n*Assembly, name=Assembly\n*Instance, name=AAA\n*Node\n');
-fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]');
+fprintf(fid3,'*Part, name=AAA\n*End part\n*Assembly, name=Assembly\n*Instance, name=AAA, part=AAA\n*Node\n');
+fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]);
 
-%%
 %Print wall shell elements
-fprintf(fid3,'*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
+fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums' new_wall_tri]');
 
 %Print ILT solid elements
-fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT\n');
+fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT');
 fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
 
 %Lumen elements & surface
 fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = LUMEN\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums' new_lumen_tri]');
 fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
+
+%Prepares nsets for printing (must print in rows of <15)
+outrem=mod(length(outside_tet_nodes),10); inrem=mod(length(inside_tet_nodes),10);
+outheight=(length(outside_tet_nodes)-outrem)/10; inheight=(length(inside_tet_nodes)-inrem)/10;
+outnodes=reshape(outside_tet_nodes(1:end-outrem),[outheight, 10]); innodes=reshape(inside_tet_nodes(1:end-inrem),[inheight, 10]);
+outend=outside_tet_nodes(end-outrem:end); inend=inside_tet_nodes(end-inrem:end);
+
+%SURFACES FOR TIE CONTACT & LOADS:
+
+%Outside of ilt
+fprintf(fid3,'*Nset, nset=outsideilt, internal, instance=AAA\n');
+fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',outnodes);
+fprintf(fid3,'%d, ',outend);
+fprintf(fid3,'\n%s\n%s\n','*Surface, type=NODE, name=outsideiltsurf',...
+    'outsideilt');
+
+%Inside of ILT
+fprintf(fid3,'*Nset, nset=insideilt, internal, instance=AAA\n');
+fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',innodes);
+fprintf(fid3,'%d, ',inend);
+fprintf(fid3,'\n%s\n%s\n','*Surface, type=NODE, name=insideiltsurf',...
+    'insideilt');
+
+%Tie stuff together
+fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact, adjust=yes, position tolerance=0',...
+    'WALL, outsideiltsurf');
+fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact2, adjsut=yes, position tolerance=0',...
+    'LUMEN, insideiltsurf');
+fprintf(fid3,'*End Assembly\n');
 
 %Material definitions
 fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
@@ -155,10 +175,10 @@ topnodes=reshape(top_boundary_nodes(1:end-toprem),[topheight, 10]);
 botend=bottom_boundary_nodes(end-botrem:end); topend=top_boundary_nodes(end-toprem:end);
 
 %BCs:
-fprintf(fid3,'*Nset, nset=botnodes, instance=WALLINST\n');
+fprintf(fid3,'*Nset, nset=botnodes, instance=AAA\n');
 fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',botnodes);
 fprintf(fid3,'%d, ',botend);
-fprintf(fid3,'\n*Nset, nset=topnodes, instance=WALLINST\n');
+fprintf(fid3,'\n*Nset, nset=topnodes, instance=AAA\n');
 fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',topnodes);
 fprintf(fid3,'%d, ',topend);
 fprintf(fid3,'\n*Boundary\n');
@@ -178,8 +198,8 @@ fprintf(fid3,'3\n');
 fprintf(fid3,'EE, S\n');
 fprintf(fid3,'*Output, history, variable=PRESELECT\n');
 fprintf(fid3,'*El Print, freq=999999\n');
-fprintf(fid3,'*Node Print, freq=999999\n');
-fprintf(fid3,'*CONTROLS, PARAMETERS=TIME INCREMENTATION\n');
+fprintf(fid3,'*Node Print, freq=999999');
+fprintf(fid3,'*CONTROLS, PARAMETERS=TIME INCREMENTATION');
 fprintf(fid3,'7, 10, 9, 25, 10, 7, 12, 8, 6, 3\n');
 fprintf(fid3,'0.10, 0.5, 0.75, 0.85, 0.25, 0.75, 1.75, 0.75\n');
 fprintf(fid3,'0.8, 1.5, 1.25, 2, 0.95, 0.1, 1, 0.95\n');
