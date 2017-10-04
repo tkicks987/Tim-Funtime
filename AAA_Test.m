@@ -120,7 +120,7 @@ fid3=fopen(abaqus_inp_name,'w');
 % fprintf(fid3,'%s\n%s\n','*Instance, name=WALLINST, part=WALLINST','*Node');
 
 fprintf(fid3,'*HEADING\nAAA\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO\nAAA\n');
-fprintf(fid3,'%d, %f, %f, %f\n', all_nodes');
+fprintf(fid3,'%d, %f, %f, %f\n', [ all_nodes(:,1) 10*all_nodes(:,2:end)');
 
 %%
 %Print wall shell elements
