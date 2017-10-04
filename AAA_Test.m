@@ -115,11 +115,11 @@ fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums', new_wall_tri]);
 %Print ILT solid elements
 fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT\n');
 fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
-fprintf(fid3,'*End Instance\n');
 
 %Lumen elements & surface
 fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = LUMEN\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums', new_lumen_tri]);
+fprintf(fid3,'*End Instance\n');
 fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
 fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
 fprintf(fid3,'%s\n','1.,');
