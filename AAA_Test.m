@@ -117,12 +117,13 @@ fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT\n');
 fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
 
 %Lumen elements & surface
-fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = LUMEN\n');
+fprintf(fid3,'*ELEMENT, type=S3R, ELSET = LUMEN\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums', new_lumen_tri]);
-fprintf(fid3,'*End Instance\n');
-fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
 fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
 fprintf(fid3,'%s\n','1.,');
+fprintf(fid3,'*End Instance\n');
+fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
+
 
 %Prepares nsets for printing (must print in rows of <15)
 outrem=mod(length(outside_tet_nodes),10); inrem=mod(length(inside_tet_nodes),10);
