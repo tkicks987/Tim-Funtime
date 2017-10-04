@@ -119,11 +119,11 @@ fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]');
 
 %%
 %Print wall shell elements
-fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
+fprintf(fid3,'*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums' new_wall_tri]');
 
 %Print ILT solid elements
-fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT');
+fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT\n');
 fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
 
 %Lumen elements & surface
