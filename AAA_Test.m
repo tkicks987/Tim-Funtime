@@ -68,7 +68,6 @@ lz = lumen_nodes(:,3);
 %%Get boundaries
 [bottom_boundary_nodes, top_boundary_nodes] = get_boundaries(planes_name, [wn wall_nodes]);
 
-
 %%
 %Create lumen surface
 axyz = [ax ay az];
@@ -94,7 +93,6 @@ lumen_tri_elem_nums = 1:length(new_lumen_tri);
 real_wall_xyz = axyz(outside_ILT_nodes,:);
 wall_tri = MyCrustOpen(real_wall_xyz);
 
-
 for i = 1:length(wall_tri);
     
     temp_tri = wall_tri(i,:);
@@ -115,35 +113,23 @@ trimesh(new_wall_tri, ax, ay, az)
 %Write abaqus %INP file
 fid3=fopen(abaqus_inp_name,'w');
 %PRINT THE FILE HEADER
-% fprintf(fid3,'%s\n%s\n%s\n%s\n%s\n%s\n%s\n','*Heading','*Preprint,echo=NO,model=NO,history=NO,contact=NO',...
-%     '*Part, name=THRINST','*End Part','*Part, name=WALLINST','*End Part','*Assembly, name=Assembly');
-% fprintf(fid3,'%s\n%s\n','*Instance, name=WALLINST, part=WALLINST','*Node');
-
-fprintf(fid3,'*HEADING\nAAA\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO\nAAA\n');
-fprintf(fid3,'%d, %f, %f, %f\n', [ all_nodes(:,1) 10*all_nodes(:,2:end)');
+fprintf(fid3,'*HEADING\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO, CONTACT=NO\n);
+fprintf(fid3,'*Part, name=AAA\n*End part\n*Assembly, name=Assembly\n*Instance, name=AAA\n*Node\n');
+fprintf(fid3,'%d, %f, %f, %f\n', all_nodes');
 
 %%
 %Print wall shell elements
 fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums' new_wall_tri]');
 
-%%
 %Print ILT solid elements
 fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT');
 fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
 
-%%
+%Lumen elements & surface
 fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = LUMEN\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums' new_lumen_tri]');
-
-%%
-%
-outrem=mod(length(outside_ILT_nodes),10); inrem=mod(length(inside_ILT_nodes),10);
-outheight=(length(outside_ILT_nodes)-outrem)/10; inheight=(length(inside_ILT_nodes)-inrem)/10;
-outnodes=reshape(outside_ILT_nodes(1:end-outrem),[outheight, 10]); innodes=reshape(inside_ILT_nodes(1:end-inrem),[inheight, 10]);
-outend=outside_ILT_nodes(end-outrem:end); inend=inside_ILT_nodes(end-inrem:end);
-
-%%
+fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
 
 %Material definitions
 fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
@@ -154,7 +140,6 @@ fprintf(fid3,'%d, %d, 0, 0\n',17.4,188.1); %Material parameters for Raghavan-Vor
 fprintf(fid3,'%s\n','*Material, name=ILT');
 fprintf(fid3,'%s\n','*Hyperelastic, n=2');
 fprintf(fid3,'%s\n','0., 2.804,    0.,    0., 2.858,    0.,    0.');
-
 
 %Step definitions
 fprintf(fid3,'%s\n','*Step, name=Step1, nlgeom=YES');
@@ -168,7 +153,6 @@ topheight=(length(top_boundary_nodes)-toprem)/10; botheight=(length(bottom_bound
 botnodes=reshape(bottom_boundary_nodes(1:end-botrem),[botheight, 10]);
 topnodes=reshape(top_boundary_nodes(1:end-toprem),[topheight, 10]);
 botend=bottom_boundary_nodes(end-botrem:end); topend=top_boundary_nodes(end-toprem:end);
-
 
 %BCs:
 fprintf(fid3,'*Nset, nset=botnodes, instance=WALLINST\n');
@@ -204,12 +188,3 @@ fprintf(fid3,'*End Step');
 %End
 fclose all;
 disp('DONE!');
-
-
-
-
-
-
-
-
-
