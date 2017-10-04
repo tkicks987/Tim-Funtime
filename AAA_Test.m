@@ -90,37 +90,39 @@ a_nodes = a_nodes';
 real_lumen_xyz = axyz(inside_ILT_nodes,:);
 lumen_tri = MyCrustOpen(real_lumen_xyz);
 new_lumen_tri = [inside_ILT_nodes(lumen_tri(:,1));inside_ILT_nodes(lumen_tri(:,2));...
-    inside_ILT_nodes(lumen_tri(:,3))]';
+inside_ILT_nodes(lumen_tri(:,3))]';
 lumen_tri_elem_nums = 1:length(new_lumen_tri);
 
 %Create wall surface
 real_wall_xyz = axyz(outside_ILT_nodes,:);
 wall_tri = MyCrustOpen(real_wall_xyz);
-new_wall_tri = [outside_ILT_nodes(wall_tri(:,1));outside_ILT_nodes(wall_tri(:,2));outside_ILT_nodes(wall_tri(:,3))]';
+new_wall_tri = [outside_ILT_nodes(wall_tri(:,1)),outside_ILT_nodes(wall_tri(:,2)),...
+    outside_ILT_nodes(wall_tri(:,3))];
 wall_tri_elem_nums = 1:length(new_wall_tri);
-
-trimesh(new_lumen_tri, ax, ay, az); hold on
-trimesh(new_wall_tri, ax, ay, az)
 
 %Write abaqus %INP file
 fid3=fopen(abaqus_inp_name,'w');
-%PRINT THE FILE HEADER
+
+%File header & nodes
 fprintf(fid3,'*HEADING\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO, CONTACT=NO\n');
 fprintf(fid3,'*Part, name=AAA\n*End part\n*Assembly, name=Assembly\n*Instance, name=AAA, part=AAA\n*Node\n');
-fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]);
+fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]');
 
 %Print wall shell elements
-fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
-fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums' new_wall_tri]');
+fprintf(fid3,'*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
+fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums', new_wall_tri]);
 
 %Print ILT solid elements
-fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT');
+fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT\n');
 fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
+fprintf(fid3,'*End Instance\n');
 
 %Lumen elements & surface
 fprintf(fid3,'%s\n','*ELEMENT, type=S3R, ELSET = LUMEN\n');
-fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums' new_lumen_tri]');
+fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums', new_lumen_tri]);
 fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
+fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
+fprintf(fid3,'%s\n','1.,');
 
 %Prepares nsets for printing (must print in rows of <15)
 outrem=mod(length(outside_tet_nodes),10); inrem=mod(length(inside_tet_nodes),10);
@@ -129,6 +131,9 @@ outnodes=reshape(outside_tet_nodes(1:end-outrem),[outheight, 10]); innodes=resha
 outend=outside_tet_nodes(end-outrem:end); inend=inside_tet_nodes(end-inrem:end);
 
 %SURFACES FOR TIE CONTACT & LOADS:
+
+%Wall
+fprintf(fid3,'*Surface, type=ELEMENT, name=wallsurf\nAAA_WALL, SNEG\n');
 
 %Outside of ilt
 fprintf(fid3,'*Nset, nset=outsideilt, internal, instance=AAA\n');
@@ -146,14 +151,12 @@ fprintf(fid3,'\n%s\n%s\n','*Surface, type=NODE, name=insideiltsurf',...
 
 %Tie stuff together
 fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact, adjust=yes, position tolerance=0',...
-    'WALL, outsideiltsurf');
-fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact2, adjsut=yes, position tolerance=0',...
-    'LUMEN, insideiltsurf');
+    'wallsurf, outsideiltsurf');
+fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact2, adjust=yes, position tolerance=0',...
+    'lumensurf, insideiltsurf');
 fprintf(fid3,'*End Assembly\n');
 
 %Material definitions
-fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
-fprintf(fid3,'%s\n','1.,');
 fprintf(fid3,'*Material, name=AAA_WALL\n');
 fprintf(fid3,'*Hyperelastic, n=2, reduced polynomial\n');
 fprintf(fid3,'%d, %d, 0, 0\n',17.4,188.1); %Material parameters for Raghavan-Vorp model from 2000 paper
@@ -198,8 +201,8 @@ fprintf(fid3,'3\n');
 fprintf(fid3,'EE, S\n');
 fprintf(fid3,'*Output, history, variable=PRESELECT\n');
 fprintf(fid3,'*El Print, freq=999999\n');
-fprintf(fid3,'*Node Print, freq=999999');
-fprintf(fid3,'*CONTROLS, PARAMETERS=TIME INCREMENTATION');
+fprintf(fid3,'*Node Print, freq=999999\n');
+fprintf(fid3,'*CONTROLS, PARAMETERS=TIME INCREMENTATION\n');
 fprintf(fid3,'7, 10, 9, 25, 10, 7, 12, 8, 6, 3\n');
 fprintf(fid3,'0.10, 0.5, 0.75, 0.85, 0.25, 0.75, 1.75, 0.75\n');
 fprintf(fid3,'0.8, 1.5, 1.25, 2, 0.95, 0.1, 1, 0.95\n');
