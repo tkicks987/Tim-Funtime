@@ -1,5 +1,5 @@
-% clear;
-% clc;
+clear;
+clc;
 load inside_ILT_nodes.mat
 inside_ILT_nodes = lumen_nodes;
 
