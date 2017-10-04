@@ -113,9 +113,9 @@ trimesh(new_wall_tri, ax, ay, az)
 %Write abaqus %INP file
 fid3=fopen(abaqus_inp_name,'w');
 %PRINT THE FILE HEADER
-fprintf(fid3,'*HEADING\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO, CONTACT=NO\n);
+fprintf(fid3,'*HEADING\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO, CONTACT=NO\n');
 fprintf(fid3,'*Part, name=AAA\n*End part\n*Assembly, name=Assembly\n*Instance, name=AAA\n*Node\n');
-fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)');
+fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]');
 
 %%
 %Print wall shell elements
