@@ -64,7 +64,7 @@ ly = lumen_nodes(:,2);
 lz = lumen_nodes(:,3);
 
 %%Get boundaries
-[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries('PLANES.stl',[wn wall_nodes]);
+[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries('PLANES.stl',[nodes ax ay az]);
 
 %Finds outside of ILT
 logis=ismembertol([ax,ay,az],[wx,wy,wz],1e-8);
