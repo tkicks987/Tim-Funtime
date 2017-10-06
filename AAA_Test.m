@@ -131,11 +131,11 @@ fprintf(fid3,'*End Instance\n');
 
 %Assembly-level elsets
 %Element sets 
-fprintf(fid3,'%s\n%s\n','*Elset, elset=WALL, internal, generate',...
+fprintf(fid3,'%s\n%s\n','*Elset, elset=WALL, internal, instance=AAA',...
     ['1, ',num2str(max(wall_tri_elem_nums)),', 1']);
-fprintf(fid3,'%s\n%s\n','*Elset, elset=ILT, internal, generate',...
+fprintf(fid3,'%s\n%s\n','*Elset, elset=ILT, internal, instance=AAA',...
     [num2str(min(ILT_E)),', ',num2str(max(ILT_E)),', 1']);
-fprintf(fid3,'%s\n%s\n','*Elset, elset=LUMEN, internal, generate',...
+fprintf(fid3,'%s\n%s\n','*Elset, elset=LUMEN, internal, instance=AAA',...
     [num2str(min(lumen_tri_elem_nums)),', ',num2str(max(lumen_tri_elem_nums)),', 1']);
 
 %Prepares nsets for printing (must print in rows of <15)
@@ -150,7 +150,7 @@ outend=outside_tet_nodes(end-outrem:end); inend=inside_tet_nodes(end-inrem:end);
 fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
 
 %Wall
-fprintf(fid3,'*Surface, type=ELEMENT, name=wallsurf\nAAA_WALL, SNEG\n');
+fprintf(fid3,'*Surface, type=ELEMENT, name=wallsurf\nWALL, SNEG\n');
 
 %Outside of ilt
 fprintf(fid3,'*Nset, nset=outsideilt, internal, instance=AAA\n');
