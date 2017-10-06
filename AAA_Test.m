@@ -64,7 +64,7 @@ ly = lumen_nodes(:,2);
 lz = lumen_nodes(:,3);
 
 %%Get boundaries
-[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries('PLANES.stl',[nodes ax ay az]);
+[bottom_boundary_nodes, top_boundary_nodes] = get_boundaries('PLANES.stl',all_nodes);
 
 %Finds outside of ILT
 logis=ismembertol([ax,ay,az],[wx,wy,wz],1e-8);
@@ -112,20 +112,31 @@ fprintf(fid3,'*Part, name=AAA\n*End part\n*Assembly, name=Assembly\n*Instance, n
 fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]');
 
 %Print wall shell elements
-fprintf(fid3,'*ELEMENT, type=S3R, ELSET = AAA_WALL\n');
+fprintf(fid3,'*ELEMENT, type=S3R, ELSET=WALL\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [wall_tri_elem_nums', new_wall_tri]');
 
 %Print ILT solid elements
-fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET = ILT\n');
+fprintf(fid3, '*ELEMENT, type = C3D4H, ELSET=ILT\n');
 fprintf(fid3,'%d, %d, %d, %d, %d\n', [ILT_E all_tet_elements(:,2:5)]');
 
-%Lumen elements & surface
-fprintf(fid3,'*ELEMENT, type=S3R, ELSET = LUMEN\n');
+%Lumen elements
+fprintf(fid3,'*ELEMENT, type=S3R, ELSET=LUMEN\n');
 fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums', new_lumen_tri]');
-fprintf(fid3,'%s\n','*Solid Section, elset=ilt, material=ILT');
+
+%Section Assignments
+fprintf(fid3,'%s\n','*Solid Section, elset=ILT, material=ILT');
+fprintf(fid3,'%s\n','*Shell Section, elset=WALL, material=WALL');
 fprintf(fid3,'%s\n','1.,');
 fprintf(fid3,'*End Instance\n');
-fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
+
+%Assembly-level elsets
+%Element sets 
+fprintf(fid3,'%s\n%s\n','*Elset, elset=WALL, internal, generate',...
+    ['1, ',num2str(max(wall_tri_elem_nums)),', 1']);
+fprintf(fid3,'%s\n%s\n','*Elset, elset=ILT, internal, generate',...
+    [num2str(min(ILT_E)),', ',num2str(max(ILT_E)),', 1']);
+fprintf(fid3,'%s\n%s\n','*Elset, elset=LUMEN, internal, generate',...
+    [num2str(min(lumen_tri_elem_nums)),', ',num2str(max(lumen_tri_elem_nums)),', 1']);
 
 %Prepares nsets for printing (must print in rows of <15)
 outrem=mod(length(outside_tet_nodes),10); inrem=mod(length(inside_tet_nodes),10);
@@ -134,6 +145,9 @@ outnodes=reshape(outside_tet_nodes(1:end-outrem),[outheight, 10]); innodes=resha
 outend=outside_tet_nodes(end-outrem:end); inend=inside_tet_nodes(end-inrem:end);
 
 %SURFACES FOR TIE CONTACT & LOADS:
+
+%Lumen
+fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
 
 %Wall
 fprintf(fid3,'*Surface, type=ELEMENT, name=wallsurf\nAAA_WALL, SNEG\n');
@@ -160,7 +174,7 @@ fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact2, adjust=yes, position tolerance=
 fprintf(fid3,'*End Assembly\n');
 
 %Material definitions
-fprintf(fid3,'*Material, name=AAA_WALL\n');
+fprintf(fid3,'*Material, name=WALL\n');
 fprintf(fid3,'*Hyperelastic, n=2, reduced polynomial\n');
 fprintf(fid3,'%d, %d, 0, 0\n',17.4,188.1); %Material parameters for Raghavan-Vorp model from 2000 paper
 fprintf(fid3,'%s\n','*Material, name=ILT');
