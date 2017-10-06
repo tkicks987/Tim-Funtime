@@ -108,7 +108,7 @@ fid3=fopen(abaqus_inp_name,'w');
 
 %File header & nodes
 fprintf(fid3,'*HEADING\n*PREPRINT,  ECHO=NO,  MODEL=NO,  HISTORY=NO, CONTACT=NO\n');
-fprintf(fid3,'*Part, name=AAA\n*End part\n*Assembly, name=Assembly\n*Instance, name=AAA, part=AAA\n*Node\n');
+fprintf(fid3,'*Part, name=AAA\n*Node\n');
 fprintf(fid3,'%d, %f, %f, %f\n', [all_nodes(:,1) 10*all_nodes(:,2:end)]');
 
 %Print wall shell elements
@@ -125,18 +125,24 @@ fprintf(fid3,'%d, %d, %d, %d\n', [lumen_tri_elem_nums', new_lumen_tri]');
 
 %Section Assignments
 fprintf(fid3,'%s\n','*Solid Section, elset=ILT, material=ILT');
-fprintf(fid3,'%s\n','*Shell Section, elset=WALL, material=WALL');
 fprintf(fid3,'%s\n','1.,');
-fprintf(fid3,'*End Instance\n');
+fprintf(fid3,'%s\n','*Shell Section, elset=WALL, material=WALL');
+fprintf(fid3,'1.3, 5\n');
 
-%Assembly-level elsets
-%Element sets 
-fprintf(fid3,'%s\n%s\n','*Elset, elset=WALL, internal, instance=AAA',...
-    ['1, ',num2str(max(wall_tri_elem_nums)),', 1']);
-fprintf(fid3,'%s\n%s\n','*Elset, elset=ILT, internal, instance=AAA',...
-    [num2str(min(ILT_E)),', ',num2str(max(ILT_E)),', 1']);
-fprintf(fid3,'%s\n%s\n','*Elset, elset=LUMEN, internal, instance=AAA',...
-    [num2str(min(lumen_tri_elem_nums)),', ',num2str(max(lumen_tri_elem_nums)),', 1']);
+%Sets up top node and bottom node nsets for printing
+toprem=mod(length(top_boundary_nodes),10); botrem=mod(length(bottom_boundary_nodes),10);
+topheight=(length(top_boundary_nodes)-toprem)/10; botheight=(length(bottom_boundary_nodes)-botrem)/10;
+botnodes=reshape(bottom_boundary_nodes(1:end-botrem),[botheight, 10]);
+topnodes=reshape(top_boundary_nodes(1:end-toprem),[topheight, 10]);
+botend=bottom_boundary_nodes(end-botrem:end); topend=top_boundary_nodes(end-toprem:end);
+
+%Bottom & top boundaries
+fprintf(fid3,'*Nset, nset=botnodes\n');
+fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',botnodes);
+fprintf(fid3,'%d, ',botend);
+fprintf(fid3,'\n*Nset, nset=topnodes\n');
+fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',topnodes);
+fprintf(fid3,'%d, ',topend);
 
 %Prepares nsets for printing (must print in rows of <15)
 outrem=mod(length(outside_tet_nodes),10); inrem=mod(length(inside_tet_nodes),10);
@@ -147,30 +153,35 @@ outend=outside_tet_nodes(end-outrem:end); inend=inside_tet_nodes(end-inrem:end);
 %SURFACES FOR TIE CONTACT & LOADS:
 
 %Lumen
-fprintf(fid3,'*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
+fprintf(fid3,'\n*Surface, type=ELEMENT, name=lumensurf\nLUMEN, SNEG\n');
 
 %Wall
 fprintf(fid3,'*Surface, type=ELEMENT, name=wallsurf\nWALL, SNEG\n');
 
 %Outside of ilt
-fprintf(fid3,'*Nset, nset=outsideilt, internal, instance=AAA\n');
+fprintf(fid3,'*Nset, nset=outsideilt\n');
 fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',outnodes);
 fprintf(fid3,'%d, ',outend);
 fprintf(fid3,'\n%s\n%s\n','*Surface, type=NODE, name=outsideiltsurf',...
     'outsideilt');
 
 %Inside of ILT
-fprintf(fid3,'*Nset, nset=insideilt, internal, instance=AAA\n');
+fprintf(fid3,'*Nset, nset=insideilt\n');
 fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',innodes);
 fprintf(fid3,'%d, ',inend);
 fprintf(fid3,'\n%s\n%s\n','*Surface, type=NODE, name=insideiltsurf',...
     'insideilt');
+fprintf(fid3,'*End Part\n');
 
-%Tie stuff together
+%Assembly
+fprintf(fid3,'%s\n%s\n%s\n','*Assembly, name=Assembly',...
+    '*Instance, name=AAA, part=AAA','*End Instance');
+
+%Tie Contacts
 fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact, adjust=yes, position tolerance=0',...
-    'wallsurf, outsideiltsurf');
+    'AAA.wallsurf, AAA.outsideiltsurf');
 fprintf(fid3,'%s\n%s\n','*Tie, name=tiecontact2, adjust=yes, position tolerance=0',...
-    'lumensurf, insideiltsurf');
+    'AAA.lumensurf, AAA.insideiltsurf');
 fprintf(fid3,'*End Assembly\n');
 
 %Material definitions
@@ -187,26 +198,13 @@ fprintf(fid3,'%s\n','*Static');
 fprintf(fid3,'%s\n','0.01, 1., 1e-5, 0.4');
 fprintf(fid3,'%s\n','***********************************************');
 
-%Sets up top node and bottom node nsets for printing
-toprem=mod(length(top_boundary_nodes),10); botrem=mod(length(bottom_boundary_nodes),10);
-topheight=(length(top_boundary_nodes)-toprem)/10; botheight=(length(bottom_boundary_nodes)-botrem)/10;
-botnodes=reshape(bottom_boundary_nodes(1:end-botrem),[botheight, 10]);
-topnodes=reshape(top_boundary_nodes(1:end-toprem),[topheight, 10]);
-botend=bottom_boundary_nodes(end-botrem:end); topend=top_boundary_nodes(end-toprem:end);
-
-%BCs:
-fprintf(fid3,'*Nset, nset=botnodes, instance=AAA\n');
-fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',botnodes);
-fprintf(fid3,'%d, ',botend);
-fprintf(fid3,'\n*Nset, nset=topnodes, instance=AAA\n');
-fprintf(fid3,'%d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n',topnodes);
-fprintf(fid3,'%d, ',topend);
+%BCs
 fprintf(fid3,'\n*Boundary\n');
-fprintf(fid3,'topnodes, 1, 3\n');
-fprintf(fid3,'botnodes, 1, 3\n');
+fprintf(fid3,'AAA.topnodes, 1, 3\n');
+fprintf(fid3,'AAA.botnodes, 1, 3\n');
 
 %Loads
-fprintf(fid3,'%s\n%s\n','*Dsload','LUMEN, P, 1.57');
+fprintf(fid3,'%s\n%s\n','*Dsload','AAA.lumensurf, P, 1.57');
 
 %Output requests
 fprintf(fid3,'*Restart, write, frequency=1\n');
