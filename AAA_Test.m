@@ -206,7 +206,7 @@ fprintf(fid3,'AAA.topnodes, 1, 3\n');
 fprintf(fid3,'AAA.botnodes, 1, 3\n');
 
 %Loads
-fprintf(fid3,'%s\n%s\n','*Dsload','AAA.lumensurf, P, 1.57');
+fprintf(fid3,'%s\n%s\n','*Dsload','AAA.lumensurf, P, 0.0157');
 
 %Output requests
 fprintf(fid3,'*Restart, write, frequency=1\n');
