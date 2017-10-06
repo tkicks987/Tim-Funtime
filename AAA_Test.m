@@ -128,6 +128,8 @@ fprintf(fid3,'%s\n','*Solid Section, elset=ILT, material=ILT');
 fprintf(fid3,'%s\n','1.,');
 fprintf(fid3,'%s\n','*Shell Section, elset=WALL, material=WALL');
 fprintf(fid3,'1.3, 5\n');
+fprintf(fid3,'%s\n','*Shell Section, elset=LUMEN, material=ILT');
+fprintf(fid3,'1, 5\n');
 
 %Sets up top node and bottom node nsets for printing
 toprem=mod(length(top_boundary_nodes),10); botrem=mod(length(bottom_boundary_nodes),10);
