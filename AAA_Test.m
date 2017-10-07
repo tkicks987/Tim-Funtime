@@ -189,10 +189,10 @@ fprintf(fid3,'*End Assembly\n');
 %Material definitions
 fprintf(fid3,'*Material, name=WALL\n');
 fprintf(fid3,'*Hyperelastic, n=2, reduced polynomial\n');
-fprintf(fid3,'%d, %d, 0, 0\n',17.4,188.1); %Material parameters for Raghavan-Vorp model from 2000 paper
+fprintf(fid3,'%d, %d, 0, 0\n',.174 ,1.881); %Material parameters for Raghavan-Vorp model from 2000 paper
 fprintf(fid3,'%s\n','*Material, name=ILT');
 fprintf(fid3,'%s\n','*Hyperelastic, n=2');
-fprintf(fid3,'%s\n','0., 2.804,    0.,    0., 2.858,    0.,    0.');
+fprintf(fid3,'%s\n','0., 0.02804,    0.,    0., 0.02858,    0.,    0.');
 
 %Step definitions
 fprintf(fid3,'%s\n','*Step, name=Step1, nlgeom=YES');
