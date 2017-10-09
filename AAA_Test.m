@@ -152,6 +152,13 @@ outheight=(length(outside_tet_nodes)-outrem)/10; inheight=(length(inside_tet_nod
 outnodes=reshape(outside_tet_nodes(1:end-outrem),[outheight, 10]); innodes=reshape(inside_tet_nodes(1:end-inrem),[inheight, 10]);
 outend=outside_tet_nodes(end-outrem:end); inend=inside_tet_nodes(end-inrem:end);
 
+%Remove top and bottom boundary from outnodes and innodes
+remove_common_boundary_outnodes = ismember(outnodes, [topnodes; botnodes])
+outnodes(remove_common_boundary_outnodes) = [];
+
+remove_common_boundary_innodes  = ismember(innodes, [topnodes; botnodes]);
+innodes(remove_common_boundary_innodes) = [];
+
 %SURFACES FOR TIE CONTACT & LOADS:
 
 %Lumen
